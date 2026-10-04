@@ -2,14 +2,18 @@ package http2
 
 import "testing"
 
-// TestIncyFrameScratchBufferCapped guards the incy 32KB patch in
-// frameScratchBufferLen. If an upstream rebase drops or moves the patch,
-// this fails loudly instead of silently restoring the 512KB buffer.
+// Exercise both long-lived XHTTP uploads and finite request bodies after rebase.
 func TestIncyFrameScratchBufferCapped(t *testing.T) {
-	const want = 32 << 10
-	cs := &clientStream{reqBodyContentLength: -1} // -1 = unknown length (gRPC/duplex)
-	got := cs.frameScratchBufferLen(1 << 20)      // peer advertises a huge 1MB frame size
-	if got > want {
-		t.Fatalf("frameScratchBufferLen returned %d, want <= %d (incy 32KB patch missing?)", got, want)
+	for _, tc := range []struct {
+		length      int64
+		frame, want int
+	}{
+		{-1, 1 << 20, 32 << 10}, {-1, 16 << 10, 16 << 10},
+		{0, 1 << 20, 1}, {100, 1 << 20, 101}, {1 << 20, 1 << 20, 32 << 10},
+	} {
+		cs := &clientStream{reqBodyContentLength: tc.length}
+		if got := cs.frameScratchBufferLen(tc.frame); got != tc.want {
+			t.Fatalf("length=%d frame=%d: got %d, want %d", tc.length, tc.frame, got, tc.want)
+		}
 	}
 }

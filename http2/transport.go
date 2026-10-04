@@ -1449,7 +1449,7 @@ var (
 // outgoing request bodies to read/write to/from.
 //
 // It returns max(1, min(peer's advertised max frame size,
-// Request.ContentLength+1, 512KB)).
+// Request.ContentLength+1, 32KB)).
 func (cs *clientStream) frameScratchBufferLen(maxFrameSize int) int {
 	const max = 32 << 10 // incy: shrink http2 client scratch buffer (golang/go#79831) to cut iOS NE memory
 	n := int64(maxFrameSize)
@@ -1466,7 +1466,7 @@ func (cs *clientStream) frameScratchBufferLen(maxFrameSize int) int {
 	if n < 1 {
 		return 1
 	}
-	return int(n) // doesn't truncate; max is 512K
+	return int(n) // doesn't truncate; max is 32 KiB
 }
 
 // Seven bufPools manage different frame sizes. This helps to avoid scenarios where long-running
